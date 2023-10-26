@@ -1,10 +1,11 @@
 # stripe-stateful-mock
 
-Simulates a stateful Stripe server for local unit testing.  Makes Stripe calls 50-100x faster than testing against the official server.
+Simulates a stateful Stripe server for local unit testing. Makes Stripe calls 50-100x faster than testing against the official server.
 
 **Stripe version mocked:** `2020-08-27`
 
 Supported features:
+
 - charges: create with the most common [test tokens](https://stripe.com/docs/testing) or customer card, retrieve, list, update, capture
 - refunds: create, retrieve, list
 - customers: create, retrieve, update, list, create card, retrieve card, delete card
@@ -16,26 +17,26 @@ Supported features:
 - connect accounts: create, delete
 - idempotency
 
-Correctness of this test server is not guaranteed!  Set up unit testing to work against either the Stripe server with a test account or this mock server with a flag to switch between them.  Test against the official Stripe server occasionally to ensure correctness on the fine details.
+Correctness of this test server is not guaranteed! Set up unit testing to work against either the Stripe server with a test account or this mock server with a flag to switch between them. Test against the official Stripe server occasionally to ensure correctness on the fine details.
 
 ## Usage
 
-The server can be started in multiple ways but in each case it starts an HTTP server (default port is 8000) which can be connected to with any Stripe client.  For example in JavaScript...
+The server can be started in multiple ways but in each case it starts an HTTP server (default port is 8420) which can be connected to with any Stripe client. For example in JavaScript...
 
 ```javascript
 const Stripe = require("stripe");
 const client = new Stripe("sk_test_foobar", {
-    apiVersion: "2020-08-27",
-    host: "localhost",
-    port: port,
-    protocol: "http"
+  apiVersion: "2020-08-27",
+  host: "localhost",
+  port: port,
+  protocol: "http",
 });
 ```
 
 The server supports the following settings through environment variables:
 
-- `LOG_LEVEL` sets the log output verbosity.  Values are: `silent`, `error`, `warn`, `info`, `debug`.
-- `PORT` the port to start the server on.  Defaults to 8000.
+- `LOG_LEVEL` sets the log output verbosity. Values are: `silent`, `error`, `warn`, `info`, `debug`.
+- `PORT` the port to start the server on. Defaults to 8420.
 
 ### As a shell command
 
@@ -51,7 +52,7 @@ In your NPM test script: `mocha --require stripe-stateful-mock/autostart`
 
 ### Custom
 
-The server is implemented as an Express 4 application and can be fully controlled.  This does not start the server by default.
+The server is implemented as an Express 4 application and can be fully controlled. This does not start the server by default.
 
 ```javascript
 const http = require("http");
@@ -87,15 +88,15 @@ Send a source token composed of multiple test tokens separated by pipes (`|`) to
 
 `tok_chargeDeclinedInsufficientFunds|tok_visa`
 
-The first time this charge source token is used an insufficient funds response will be sent.  The second time it's used the charge will succeed with a visa transaction.
+The first time this charge source token is used an insufficient funds response will be sent. The second time it's used the charge will succeed with a visa transaction.
 
 #### Example 2
 
 `tok_500|tok_500|tok_visa|asdfasdf`
 
-The first and second time this charge source token is used a 500 response is returned.  The third time the charge will succeed with a visa transaction.
+The first and second time this charge source token is used a 500 response is returned. The third time the charge will succeed with a visa transaction.
 
-A random string is appended to the end to guarantee this sequence won't be confused for a similar test (eg `tok_500|tok_500|tok_visa|hjklhjkl`) that may be running simultaneously.  It's a lazy hack that accomplishes namespacing.
+A random string is appended to the end to guarantee this sequence won't be confused for a similar test (eg `tok_500|tok_500|tok_visa|hjklhjkl`) that may be running simultaneously. It's a lazy hack that accomplishes namespacing.
 
 ## Existing work
 

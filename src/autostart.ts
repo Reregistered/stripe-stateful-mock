@@ -1,18 +1,18 @@
 import log = require("loglevel");
-import {createExpressApp} from "./";
+import { createExpressApp } from "./";
 
 // This script starts the server automatically using env vars to control configuration.
 
 log.setDefaultLevel("info");
 if (process.env["LOG_LEVEL"]) {
-    log.setLevel(process.env["LOG_LEVEL"] as any);
+  log.setLevel(process.env["LOG_LEVEL"] as any);
 }
 
 const app = createExpressApp();
 
-const port = process.env["PORT"] || 8000;
+const port = process.env["PORT"] || 8420;
 app.listen(+port, () => {
-    log.info(`Server started on port ${port}`);
+  log.info(`Server started on port ${port}`);
 });
 
-export {app, port};
+export { app, port };

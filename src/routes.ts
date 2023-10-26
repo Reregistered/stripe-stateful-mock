@@ -13,6 +13,7 @@ import { refunds } from "./api/refunds";
 import { subscriptions } from "./api/subscriptions";
 import { taxRates } from "./api/taxRates";
 import { expandList, expandObject } from "./api/utils";
+import { webhooks } from "./api/webhooks";
 
 const routes = express.Router();
 
@@ -157,6 +158,16 @@ routes.post("/v1/customers/:id", (req, res) => {
     customer,
     ["sources", "subscriptions"],
     req.body.expand
+  );
+  return res.status(200).json(expandedCustomer);
+});
+
+routes.delete("/v1/customers/:id", (req, res) => {
+  const customer = customers.del(getRequestAccountId(req), req.params.id, "id");
+  const expandedCustomer = expandObject(
+    customer,
+    ["sources", "subscriptions"],
+    req.query.expand as any
   );
   return res.status(200).json(expandedCustomer);
 });
@@ -364,7 +375,13 @@ routes.get("/v1/subscriptions/:id", (req, res) => {
   return res.status(200).json(subscription);
 });
 
-// TODO: routes.post("/v1/subscriptions/:id")
+routes.delete("/v1/subscriptions/:id", (req, res) => {
+  const subscription = subscriptions.del(
+    getRequestAccountId(req),
+    req.params.id
+  );
+  return res.status(200).json(subscription);
+});
 
 routes.get("/v1/subscription_items", (req, res) => {
   const subscriptionItemList = subscriptions.listItems(
@@ -418,6 +435,25 @@ routes.post("/v1/tax_rates/:id", (req, res) => {
     req.body
   );
   return res.status(200).json(taxRate);
+});
+
+routes.post("/v1/webhook_endpoints", (req, res) => {
+  const webhookEndpoint = webhooks.create(getRequestAccountId(req), req.body);
+  return res.status(200).json(webhookEndpoint);
+});
+
+routes.get("/v1/webhook_endpoints/:id", (req, res) => {
+  const webhookEndpoint = webhooks.retrieve(
+    getRequestAccountId(req),
+    req.params.id,
+    "id"
+  );
+  return res.status(200).json(webhookEndpoint);
+});
+
+routes.get("/v1/webhook_endpoints", (req, res) => {
+  const webhookEndpoint = webhooks.list(getRequestAccountId(req), req.params);
+  return res.status(200).json(webhookEndpoint);
 });
 
 routes.all("*", (req, res) => {

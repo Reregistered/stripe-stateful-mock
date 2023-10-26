@@ -11,7 +11,11 @@ export namespace prices {
 
   export function create(
     accountId: string,
-    params: Stripe.PriceCreateParams
+    // augmented type so mock can specify ID when seeding
+    // this is not officially supported behaviour
+    params: Stripe.PriceCreateParams & {
+      id?: string;
+    }
   ): Stripe.Price {
     log.debug("prices.create", accountId, params);
 
@@ -25,7 +29,7 @@ export namespace prices {
       });
     }
 
-    const priceId = `price_${generateId(24)}`;
+    const priceId = params.id ?? `price_${generateId(24)}`;
     const billingScheme = params.billing_scheme ?? "per_unit";
     const price: Stripe.Price = {
       id: priceId,

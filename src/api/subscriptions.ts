@@ -8,6 +8,7 @@ import { verify } from "./verify";
 import { taxRates } from "./taxRates";
 import { accounts } from "./accounts";
 import log = require("loglevel");
+import { webhooks } from "./webhooks";
 
 export namespace subscriptions {
   const accountSubscriptions = new AccountData<Stripe.Subscription>();
@@ -127,6 +128,12 @@ export namespace subscriptions {
       subscription
     );
 
+    webhooks.post(
+      accountId,
+      JSON.stringify(subscription),
+      "customer.subscription.created"
+    );
+
     return subscription;
   }
 
@@ -178,6 +185,11 @@ export namespace subscriptions {
       subscriptionItem.quantity = +params.quantity;
     }
 
+    if (params.price) {
+      const price = prices.retrieve(accountId, params.price, "id");
+      subscriptionItem.price = price;
+    }
+
     return subscriptionItem;
   }
 
@@ -216,6 +228,12 @@ export namespace subscriptions {
       }
     }
 
+    webhooks.post(
+      accountId,
+      JSON.stringify(subscription),
+      "customer.subscription.updated"
+    );
+
     return subscription;
   }
 
@@ -236,6 +254,34 @@ export namespace subscriptions {
         type: "invalid_request_error",
       });
     }
+    return subscription;
+  }
+
+  export function del(
+    accountId: string,
+    subscriptionId: string
+  ): Stripe.Subscription {
+    log.debug("subscriptions.delete", subscriptionId);
+
+    const subscription = accountSubscriptions.get(accountId, subscriptionId);
+    if (!subscription) {
+      throw new RestError(404, {
+        code: "resource_missing",
+        doc_url: "https://stripe.com/docs/error-codes/resource-missing",
+        message: `No such subscription: ${subscriptionId}`,
+        type: "invalid_request_error",
+      });
+    }
+
+    // todo - find whatever is related to this.
+    accountSubscriptions.remove(accountId, subscriptionId);
+
+    webhooks.post(
+      accountId,
+      JSON.stringify(subscription),
+      "customer.subscription.deleted"
+    );
+
     return subscription;
   }
 

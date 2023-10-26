@@ -111,6 +111,29 @@ export namespace customers {
     return customer;
   }
 
+  export function del(
+    accountId: string,
+    customerId: string,
+    paramName: string
+  ): Stripe.Customer {
+    log.debug("customers.delete", accountId, customerId);
+
+    const customer = accountCustomers.get(accountId, customerId);
+    if (!customer) {
+      throw new RestError(404, {
+        code: "resource_missing",
+        doc_url: "https://stripe.com/docs/error-codes/resource-missing",
+        message: `No such customer: ${customerId}`,
+        param: paramName,
+        type: "invalid_request_error",
+      });
+    }
+
+    accountCustomers.remove(accountId, customerId);
+
+    return customer;
+  }
+
   export function list(
     accountId: string,
     params: Stripe.CustomerListParams
