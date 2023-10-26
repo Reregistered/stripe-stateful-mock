@@ -181,6 +181,44 @@ export namespace subscriptions {
     return subscriptionItem;
   }
 
+  export function update(
+    accountId: string,
+    subscriptionId: string,
+    params: Stripe.SubscriptionUpdateParams
+  ): Stripe.Subscription {
+    log.debug("subscriptions.update", subscriptionId);
+
+    const subscription = accountSubscriptions.get(accountId, subscriptionId);
+    if (!subscription) {
+      throw new RestError(404, {
+        code: "resource_missing",
+        doc_url: "https://stripe.com/docs/error-codes/resource-missing",
+        message: `No such subscription: ${subscriptionId}`,
+        type: "invalid_request_error",
+      });
+    }
+
+    // now update it.
+    // TODO: genric update for all properties included
+    // in the params
+    subscription.days_until_due =
+      params.days_until_due ?? subscription.days_until_due;
+
+    subscription.collection_method =
+      params.collection_method ?? subscription.collection_method;
+
+    subscription.automatic_tax =
+      params.automatic_tax ?? subscription.automatic_tax;
+
+    if (params.items !== undefined) {
+      for (let itr = 0; itr < params.items.length; itr++) {
+        updateItem(accountId, params.items[itr].id, params.items[itr]);
+      }
+    }
+
+    return subscription;
+  }
+
   export function retrieve(
     accountId: string,
     subscriptionId: string,

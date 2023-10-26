@@ -5,6 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
+    "docker:build": "docker build .",
+    "docker:deploy": "docker build . -t=registered/stripe-mock:latest && docker push registered/stripe-mock:latest",
     "clean": "rimraf ./dist",
     "lint": "eslint . --ext .ts,.tsx",
     "prepublishOnly": "npm run clean && npm run build && npm run lint && npm run test",
