@@ -1,5 +1,8 @@
 FROM node:16-bullseye-slim
-COPY package-lock.json package.json ./
-COPY dist ./dist
+
+WORKDIR /stripe-mock
+
+COPY --from=project package-lock.json package.json ./
+COPY --from=project dist .
 RUN npm install
-CMD node ./dist/cli.js
+CMD node ./cli.js
