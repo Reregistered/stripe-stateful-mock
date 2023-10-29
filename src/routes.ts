@@ -222,7 +222,7 @@ routes.get("/v1/disputes/:id", (req, res) => {
 });
 
 routes.get("/v1/invoices/upcoming/", (req, res) => {
-  const dispute = invoices.upcoming(getRequestAccountId(req), req.params);
+  const dispute = invoices.upcoming(getRequestAccountId(req), req.query);
   return res.status(200).json(dispute);
 });
 
@@ -293,7 +293,12 @@ routes.get("/v1/prices", (req, res) => {
 });
 
 routes.get("/v1/prices/:id", (req, res) => {
-  const price = prices.retrieve(getRequestAccountId(req), req.params.id, "id");
+  const price = prices.retrieve(
+    getRequestAccountId(req),
+    req.params.id,
+    "id",
+    req.query
+  );
   return res.status(200).json(price);
 });
 

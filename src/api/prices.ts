@@ -29,6 +29,9 @@ export namespace prices {
       });
     }
 
+    // when "getting", callers expect a fully resolved
+    // product. We'll resolve in the "get"
+    const product = params.product;
     const priceId = params.id ?? `price_${generateId(24)}`;
     const billingScheme = params.billing_scheme ?? "per_unit";
     const price: Stripe.Price = {
@@ -42,9 +45,9 @@ export namespace prices {
       lookup_key: params.lookup_key ?? null,
       metadata: stringifyMetadata(params.metadata),
       nickname: params.nickname ?? null,
-      product: params.product
-        ? params.product
-        : products.create(accountId, params.product_data).id,
+      product: product
+        ? product
+        : products.create(accountId, params.product_data),
       recurring: params.recurring
         ? {
             aggregate_usage: params.recurring.aggregate_usage ?? null,
@@ -69,7 +72,8 @@ export namespace prices {
   export function retrieve(
     accountId: string,
     priceId: string,
-    paramName: string
+    paramName: string,
+    params: Stripe.PriceRetrieveParams
   ): Stripe.Price {
     log.debug("prices.retrieve", accountId, priceId);
 
@@ -83,6 +87,18 @@ export namespace prices {
         type: "invalid_request_error",
       });
     }
+    if (
+      params.expand?.includes("product") &&
+      typeof price.product === "string"
+    ) {
+      return {
+        ...price,
+        ...{
+          product: products.retrieve(accountId, price.product, "id"),
+        },
+      };
+    }
+
     return price;
   }
 
@@ -93,7 +109,7 @@ export namespace prices {
   ): Stripe.Price {
     log.debug("prices.updateItem", accountId, priceId, params);
 
-    const price = retrieve(accountId, priceId, "id");
+    const price = retrieve(accountId, priceId, "id", params);
 
     if (params.active != undefined) {
       price.active = (params.active as any) === "true";
@@ -131,7 +147,7 @@ export namespace prices {
     }
 
     return applyListOptions(data, params, (id, paramName) =>
-      retrieve(accountId, id, paramName)
+      retrieve(accountId, id, paramName, params)
     );
   }
 }

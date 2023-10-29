@@ -42,7 +42,8 @@
     "deep-equal": "^2.0.4",
     "express": "^4.17.1",
     "loglevel": "^1.7.0",
-    "axios": "1.6.0"
+    "axios": "1.6.0",
+    "date-fns": "2.30.0"
   },
   "devDependencies": {
     "@types/basic-auth": "^1.1.3",

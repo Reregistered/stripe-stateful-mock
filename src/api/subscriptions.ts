@@ -9,6 +9,7 @@ import { taxRates } from "./taxRates";
 import { accounts } from "./accounts";
 import log = require("loglevel");
 import { webhooks } from "./webhooks";
+import { add } from "date-fns";
 
 export namespace subscriptions {
   const accountSubscriptions = new AccountData<Stripe.Subscription>();
@@ -43,8 +44,8 @@ export namespace subscriptions {
     }
 
     const now = Math.floor(Date.now() / 1000);
-    const nextMonth = new Date();
-    nextMonth.setMonth(nextMonth.getMonth() + 1);
+    const nextMonth = add(new Date(), { months: 1 });
+    const nextYear = add(new Date(), { years: 1 });
 
     const subscription: Stripe.Subscription = {
       id: subscriptionId,
@@ -67,7 +68,9 @@ export namespace subscriptions {
       cancel_at_period_end: false,
       canceled_at: null,
       created: now,
-      current_period_end: Math.floor(nextMonth.getTime() / 1000), // Hard coded to assume month long subscriptions
+
+      // set to one month, however if we find a yearly price item, we'll revise
+      current_period_end: Math.floor(nextMonth.getTime() / 1000),
       current_period_start: now,
       customer: params.customer,
       days_until_due: +params.days_until_due || null,
@@ -113,9 +116,13 @@ export namespace subscriptions {
 
     if (params.items) {
       for (const item of params.items) {
-        subscription.items.data.push(
-          createItem(accountId, item, subscription.id)
-        );
+        const subscriptionItem = createItem(accountId, item, subscription.id);
+        subscription.items.data.push(subscriptionItem);
+        if (subscriptionItem.price.recurring?.interval === "year") {
+          subscription.current_period_end = Math.floor(
+            nextYear.getTime() / 1000
+          );
+        }
       }
     }
 
@@ -154,7 +161,7 @@ export namespace subscriptions {
       metadata: stringifyMetadata(item.metadata),
       plan: null,
       price: item.price
-        ? prices.retrieve(accountId, item.price, "price")
+        ? prices.retrieve(accountId, item.price, "price", {})
         : null,
       quantity: +item.quantity || 1,
       subscription: subscriptionId,
@@ -186,8 +193,24 @@ export namespace subscriptions {
     }
 
     if (params.price) {
-      const price = prices.retrieve(accountId, params.price, "id");
+      const price = prices.retrieve(accountId, params.price, "id", params);
       subscriptionItem.price = price;
+
+      // we changed the price, maybe we need to change the interval
+      const subscription = retrieve(
+        accountId,
+        subscriptionItem.subscription,
+        "id"
+      );
+
+      const start = new Date(subscription.current_period_start * 1000);
+
+      // take the created and add a year.
+      subscription.current_period_end =
+        (price.recurring.interval === "year"
+          ? add(start, { years: 1 })
+          : add(start, { months: 1 })
+        ).getTime() / 1000;
     }
 
     return subscriptionItem;

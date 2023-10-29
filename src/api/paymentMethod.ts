@@ -4,6 +4,8 @@ import { applyListOptions, generateId } from "./utils";
 import { verify } from "./verify";
 import { RestError } from "./RestError";
 import log = require("loglevel");
+import { cards } from "./cards";
+import { customers } from "./customers";
 
 export namespace paymentMethods {
   function assertsIsPaymentMethodListParams(
@@ -16,7 +18,6 @@ export namespace paymentMethods {
   }
 
   const accountPaymentMethods = new AccountData<Stripe.PaymentMethod>();
-  const customersPaymentMethods = new Map<string, Set<string>>();
 
   export function create(
     accountId: string,
@@ -36,6 +37,7 @@ export namespace paymentMethods {
       });
     }
 
+    const cardBrand = cards.getCardBrand((params.card as any)?.number);
     const type = params.type;
     const paymentMethod: Stripe.PaymentMethod = {
       id: pmId,
@@ -51,11 +53,11 @@ export namespace paymentMethods {
           state: null,
         },
         email: null,
-        name: null,
+        name: params.billing_details?.name ?? null,
         phone: null,
       },
       card: {
-        brand: "visa",
+        brand: cardBrand,
         checks: {
           address_line1_check: null,
           address_postal_code_check: null,
@@ -68,7 +70,7 @@ export namespace paymentMethods {
         funding: "credit",
         last4: (params.card as any)?.number.slice(-4) ?? "3220",
         networks: {
-          available: ["visa"],
+          available: [cardBrand],
           preferred: null,
         },
         three_d_secure_usage: {
@@ -121,7 +123,12 @@ export namespace paymentMethods {
     }
 
     if (params.customer) {
-      data = data.filter((d) => params.customer.indexOf(d.id) !== -1);
+      data = data.filter(
+        (d) =>
+          params.customer.indexOf(
+            (typeof d.customer === "string" ? d.customer : d.customer?.id) ?? ""
+          ) !== -1
+      );
     }
 
     return applyListOptions(data, params, (id, paramName) =>
@@ -134,15 +141,12 @@ export namespace paymentMethods {
     pmId: string,
     customerId: string
   ): Stripe.PaymentMethod {
+    log.debug("paymentMethods.attach", accountId, pmId);
+
     // make sure its a real thing
     const pm = retrieve(accountId, pmId, "id");
 
-    const customerPaymentMethods =
-      customersPaymentMethods.get(customerId) ?? new Set();
-
-    customerPaymentMethods.add(pmId);
-
-    customersPaymentMethods.set(customerId, customerPaymentMethods);
+    pm.customer = customerId;
 
     return pm;
   }
@@ -151,8 +155,36 @@ export namespace paymentMethods {
     accountId: string,
     pmId: string
   ): Stripe.PaymentMethod {
+    log.debug("paymentMethods.detach", accountId, pmId);
+
     // make sure its a real thing
     const pm = retrieve(accountId, pmId, "id");
+
+    // check the customer
+    if (pm.customer) {
+      const customer =
+        typeof pm.customer === "string"
+          ? customers.retrieve(accountId, pm.customer, "id")
+          : pm.customer;
+      // check the default payment
+      if (customer.invoice_settings) {
+        if (
+          typeof customer.invoice_settings.default_payment_method === "string"
+        ) {
+          if (customer.invoice_settings.default_payment_method === pm.id) {
+            customer.invoice_settings.default_payment_method = null;
+          }
+        } else if (
+          customer.invoice_settings.default_payment_method?.id === pm.id
+        ) {
+          customer.invoice_settings.default_payment_method = null;
+        }
+      }
+    }
+
+    pm.customer = null;
+
+    accountPaymentMethods.remove(accountId, pm.id);
 
     // but its a little expensive to find it
     // so leave it alone
