@@ -141,6 +141,8 @@ export namespace subscriptions {
       "customer.subscription.created"
     );
 
+    postInvoicePaidEvent(accountId, subscription);
+
     return subscription;
   }
 
@@ -257,6 +259,8 @@ export namespace subscriptions {
       "customer.subscription.updated"
     );
 
+    postInvoicePaidEvent(accountId, subscription);
+
     return subscription;
   }
 
@@ -367,5 +371,102 @@ export namespace subscriptions {
     return applyListOptions(data, params, (id, paramName) => {
       return retrieveItem(accountId, id, paramName);
     });
+  }
+
+  function postInvoicePaidEvent(
+    accountId: string,
+    subscription: Stripe.Subscription
+  ) {
+    const invoice: Stripe.Invoice = {
+      id: "",
+      object: "invoice",
+      livemode: false,
+      payment_intent: `pi_${generateId(14)}`,
+      status: "paid",
+      account_country: "US",
+      account_name: "Datagrid",
+      account_tax_ids: null,
+      amount_due: 0,
+      amount_paid: 0,
+      amount_remaining: 0,
+      application: null,
+      application_fee_amount: null,
+      attempt_count: 1,
+      attempted: true,
+      auto_advance: false,
+      automatic_tax: {
+        enabled: false,
+        status: null,
+      },
+      billing_reason: "subscription_cycle",
+      charge: `ch_${generateId(14)}`,
+      collection_method: "charge_automatically",
+      created: Math.floor(Date.now() / 1000),
+      currency: "usd",
+      custom_fields: null,
+      customer: subscription.customer,
+      customer_address: null,
+      customer_email: null,
+      customer_name: null,
+      customer_phone: null,
+      customer_shipping: null,
+      customer_tax_exempt: "none",
+      customer_tax_ids: [],
+      default_payment_method: null,
+      default_source: null,
+      default_tax_rates: [],
+      description: null,
+      discount: null,
+      discounts: [],
+      due_date: null,
+      ending_balance: 0,
+      footer: null,
+      last_finalization_error: null,
+      lines: {
+        object: "list",
+        data: [],
+        has_more: false,
+        url: "",
+      },
+      metadata: {},
+      next_payment_attempt: null,
+      number: generateId(14),
+      on_behalf_of: null,
+      paid: true,
+      paid_out_of_band: false,
+      payment_settings: {
+        payment_method_options: null,
+        payment_method_types: null,
+      },
+      period_end: Math.floor(add(new Date(), { months: 1 }).getTime() / 1000),
+      period_start: Math.floor(Date.now() / 1000),
+      post_payment_credit_notes_amount: 0,
+      pre_payment_credit_notes_amount: 0,
+      quote: null,
+      receipt_number: null,
+      starting_balance: 0,
+      statement_descriptor: null,
+      status_transitions: {
+        finalized_at: Math.floor(Date.now() / 1000),
+        marked_uncollectible_at: null,
+        paid_at: Math.floor(Date.now() / 1000),
+        voided_at: null,
+      },
+      subscription,
+      subtotal: 0,
+      tax: null,
+      test_clock: null,
+      total: 0,
+      total_discount_amounts: [],
+      total_tax_amounts: [],
+      transfer_data: null,
+      webhooks_delivered_at: null,
+    };
+
+    // simulate a delay between `customer.subscription.created` `invoice.paid` events
+    setTimeout(
+      () => webhooks.post(accountId, JSON.stringify(invoice), "invoice.paid"),
+      3_000
+    );
   }
 }
