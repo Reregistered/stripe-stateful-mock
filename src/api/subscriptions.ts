@@ -381,7 +381,7 @@ export namespace subscriptions {
       id: "",
       object: "invoice",
       livemode: false,
-      payment_intent: `pi_${generateId(14)}`,
+      payment_intent: `pi_${subscription.id}`,
       status: "paid",
       account_country: "US",
       account_name: "Datagrid",
